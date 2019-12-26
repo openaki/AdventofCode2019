@@ -1,0 +1,14 @@
+# Advent of Code 2019 in Rust
+
+# Running solutions
+
+```
+cargo run <space separated days to run>
+
+# example (solve day2)
+
+cargo run 2
+
+
+```
+
