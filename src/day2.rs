@@ -44,7 +44,7 @@ fn run_program(vec: &mut Vec<i32>) -> i32 {
     vec[0]
 }
 
-pub fn solve_impl<T: Fn(&mut Vec<i32>)>(f: T) {
+fn solve_impl<T: Fn(&mut Vec<i32>)>(f: T) {
     let content = fs::read_to_string("./input/input2.txt").unwrap();
     let content = content.trim();
     let mut content: Vec<i32> = content
@@ -55,7 +55,7 @@ pub fn solve_impl<T: Fn(&mut Vec<i32>)>(f: T) {
     f(&mut content);
 }
 
-pub fn solve_a() {
+fn solve_a() {
     solve_impl(|vec: &mut Vec<i32>| {
         vec[1] = 12;
         vec[2] = 2;
@@ -64,7 +64,7 @@ pub fn solve_a() {
     })
 }
 
-pub fn solve_b_impl(addr: &mut Vec<i32>) {
+fn solve_b_impl(addr: &mut Vec<i32>) {
     for i in 0..100 {
         for j in 0..100 {
             let mut new_addr = addr.clone();
@@ -80,7 +80,7 @@ pub fn solve_b_impl(addr: &mut Vec<i32>) {
     }
 }
 
-pub fn solve_b() {
+fn solve_b() {
     solve_impl(|vec: &mut Vec<i32>| solve_b_impl(vec))
 }
 
