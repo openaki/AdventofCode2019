@@ -6,7 +6,7 @@ pub fn run_through_amplification(program: Vec<i32>, phase_setting: Vec<i32>, num
 
     let mut first_time = true;
     let mut programs = Vec::new();
-    for i in 0..num_amplifiers {
+    for _i in 0..num_amplifiers {
         programs.push((program.clone(), 0));
     }
     loop {
