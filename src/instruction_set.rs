@@ -2,12 +2,33 @@ use std::collections::VecDeque;
 
 pub enum OpcodeResult {
     Handled(usize),
-    AwaitingInput(usize), // The program counter
+    AwaitingInput,
     Exit,
     Error,
 }
 
-fn handle_opcode(program: &mut Vec<i32>, pc: usize, inputs: &mut VecDeque<i32>, outputs: &mut Vec<i32>) -> OpcodeResult {
+pub struct Program {
+    pub program : Vec<i32>,
+    pub program_counter : usize,
+    pub inputs: VecDeque<i32>,
+    pub outputs: VecDeque<i32>,
+}
+
+impl Program {
+    pub fn new(program: Vec<i32>) -> Program {
+        Program::new_with_io(program, 0, VecDeque::new(), VecDeque::new())
+    }
+
+    pub fn new_with_io(program: Vec<i32>, program_counter: usize, inputs: VecDeque<i32>, outputs: VecDeque<i32>) -> Program {
+        Program { program, program_counter, inputs, outputs }
+    }
+}
+
+fn handle_opcode(program_state: &mut Program) -> OpcodeResult {
+    let program = &mut program_state.program;
+    let inputs =  &mut program_state.inputs;
+    let outputs = &mut program_state.outputs;
+    let pc = program_state.program_counter;
     let opcode = program[pc];
     let inst = opcode % 100;
     let params = opcode / 100;
@@ -42,7 +63,7 @@ fn handle_opcode(program: &mut Vec<i32>, pc: usize, inputs: &mut VecDeque<i32>, 
             //reader.read_line(&mut read_string).unwrap();
             //let ri = read_string.trim().parse::<i32>().unwrap();
             if inputs.is_empty() {
-                OpcodeResult::AwaitingInput(pc)
+                OpcodeResult::AwaitingInput
             } else {
                 let ri = inputs.pop_front().unwrap();
 
@@ -53,7 +74,7 @@ fn handle_opcode(program: &mut Vec<i32>, pc: usize, inputs: &mut VecDeque<i32>, 
         }
         4 => {
             let op1 = rval(am, 1);
-            outputs.push(op1);
+            outputs.push_back(op1);
             OpcodeResult::Handled(pc + 2)
         }
         5 => {
@@ -94,28 +115,28 @@ fn handle_opcode(program: &mut Vec<i32>, pc: usize, inputs: &mut VecDeque<i32>, 
     }
 }
 
-pub fn run_program(program: &mut Vec<i32>, pc: usize, inputs: &mut VecDeque<i32>, outputs: &mut Vec<i32>) -> OpcodeResult {
-    let mut next_inst = pc;
+pub fn run_program(program_state: &mut Program) -> OpcodeResult {
 
-    let vec_len = program.len();
+    let vec_len = program_state.program.len();
 
-    while next_inst < vec_len {
-        let res = handle_opcode(program, next_inst, inputs, outputs);
+    while program_state.program_counter < vec_len {
+        let res = handle_opcode(program_state);
         match res {
             OpcodeResult::Handled(nxt) => {
-                next_inst = nxt;
+                program_state.program_counter = nxt;
             }
-            OpcodeResult::Exit | OpcodeResult::Error | OpcodeResult::AwaitingInput(_) => return res
+            OpcodeResult::Exit | OpcodeResult::Error | OpcodeResult::AwaitingInput => return res
         };
         //println!("{:?}", vec);
     }
 
+
     OpcodeResult::Exit
 }
 
-pub fn run_program_first_location(program: &mut Vec<i32>, pc: usize, inputs: &mut VecDeque<i32>, outputs: &mut Vec<i32>) -> i32 {
-    run_program(program, pc, inputs, outputs);
-    program[0]
+pub fn run_program_first_location(program_state: &mut Program) -> i32 {
+    run_program(program_state);
+    program_state.program[0]
 
 }
 
@@ -125,31 +146,33 @@ mod tests {
 
     #[test]
     fn test_solve2a() {
-        assert_eq!(2, run_program_first_location(&mut vec!(1, 0, 0, 0, 99), 0, &mut VecDeque::new(), &mut Vec::new()));
-        assert_eq!(2, run_program_first_location(&mut vec!(2, 3, 0, 3, 99), 0, &mut VecDeque::new(), &mut Vec::new()));
-        assert_eq!(30, run_program_first_location(&mut vec!(1, 1, 1, 4, 99, 5, 6, 0, 99), 0, &mut VecDeque::new(), &mut Vec::new()));
+        assert_eq!(2, run_program_first_location(&mut Program::new(vec!(1, 0, 0, 0, 99))));
+        assert_eq!(2, run_program_first_location(&mut Program::new(vec!(2, 3, 0, 3, 99))));
+        assert_eq!(30, run_program_first_location(&mut Program::new(vec!(1, 1, 1, 4, 99, 5, 6, 0, 99))));
         assert_eq!(
-            3500,
-            run_program_first_location(&mut vec!(1, 9, 10, 3, 2, 3, 11, 0, 99, 30, 40, 50), 0, &mut VecDeque::new(), &mut Vec::new())
+             3500,
+             run_program_first_location(&mut Program::new(vec!(1, 9, 10, 3, 2, 3, 11, 0, 99, 30, 40, 50)))
         );
     }
 
     #[test]
     fn test_day5_1() {
-        let mut v = vec!(1002, 4, 3, 4, 33);
-        run_program(&mut v, 0, &mut VecDeque::new(), &mut Vec::new());
-        assert_eq!(99, v[4]);
+        let v = vec!(1002, 4, 3, 4, 33);
+        let mut p = Program::new(v);
+        run_program(&mut p);
+        assert_eq!(99, p.program[4]);
     }
 
-    fn test_io(mut program: Vec<i32>, input_elem: i32, exp_output: Vec<i32>) {
-        let mut output = Vec::new();
+    fn test_io(program: Vec<i32>, input_elem: i32, exp_output: Vec<i32>) {
+        let output = VecDeque::new();
         let mut input = VecDeque::new();
         input.push_back(input_elem);
 
-        run_program(&mut program, 0, &mut input, &mut output);
-        assert_eq!(exp_output.len(), output.len());
+        let mut p = Program::new_with_io(program, 0, input, output);
+        run_program(&mut p);
+        assert_eq!(exp_output.len(), p.outputs.len());
         for i in 0..exp_output.len() {
-            assert_eq!(exp_output[i], output[i]);
+            assert_eq!(exp_output[i], p.outputs[i]);
         }
     }
 

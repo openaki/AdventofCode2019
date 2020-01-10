@@ -1,17 +1,16 @@
 use std::fs;
-use crate::instruction_set::run_program;
-use std::collections::VecDeque;
+use crate::instruction_set::{run_program, Program};
 
 fn solve_impl() -> i32 {
     let content = fs::read_to_string("./input/input5.txt").unwrap();
     let content = content.trim();
-    let mut content: Vec<i32> = content
+    let content: Vec<i32> = content
         .split(',')
         .map(|w| w.parse::<i32>().unwrap())
         .collect();
-
-    run_program(&mut content, 0, &mut VecDeque::new(),  &mut Vec::new());
-    content[0]
+    let mut p = Program::new(content);
+    run_program(&mut p);
+    p.program[0]
 }
 
 fn solve_a() {

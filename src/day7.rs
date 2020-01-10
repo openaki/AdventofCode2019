@@ -1,5 +1,4 @@
-use crate::instruction_set::{run_program, OpcodeResult};
-use std::collections::VecDeque;
+use crate::instruction_set::{run_program, Program};
 
 pub fn run_through_amplification(program: Vec<i32>, phase_setting: Vec<i32>, num_amplifiers: usize) -> i32 {
     let mut current_output = 0;
@@ -7,37 +6,29 @@ pub fn run_through_amplification(program: Vec<i32>, phase_setting: Vec<i32>, num
     let mut first_time = true;
     let mut programs = Vec::new();
     for _i in 0..num_amplifiers {
-        programs.push((program.clone(), 0));
+        programs.push(Program::new(program.clone()));
     }
     loop {
-        let mut program_result: OpcodeResult = OpcodeResult::Error;
         for i in 0..num_amplifiers {
-            let mut input = VecDeque::new();
+            let prog = &mut programs[i];
+
             if first_time {
-                input.push_back(phase_setting[i]);
+                prog.inputs.push_back(phase_setting[i]);
             }
-            input.push_back(current_output);
-            let mut output = Vec::new();
-            let (prog, pc) = &mut programs[i];
+            prog.inputs.push_back(current_output);
 
-            program_result = run_program(prog, *pc, &mut input, &mut output);
+            run_program(prog);
 
-            if !output.is_empty() {
-                current_output = output[0];
+            if !prog.outputs.is_empty() {
+                current_output = prog.outputs[0];
+                prog.outputs.pop_front();
+            } else {
+                return current_output
             }
-            match program_result {
-                OpcodeResult::AwaitingInput(new_pc) => *pc = new_pc,
-                _ => {}
-            }
+
         }
         first_time = false;
-        match program_result {
-            OpcodeResult::Exit => break,
-            _ => {}
-        };
     }
-
-    current_output
 }
 
 pub fn get_max_output(program: Vec<i32>, phase_min: i32, phase_max: i32) -> i32 {
@@ -110,7 +101,7 @@ mod tests {
         let out = run_through_amplification(program.clone(), phase_setting, 5);
         eprintln!("out = {:#?}", out);
 
-        assert_eq!(43210, get_max_output(program, 0, 5))
+        assert_eq!(43210, get_max_output(program.clone(), 0, 5))
     }
 
     #[test]

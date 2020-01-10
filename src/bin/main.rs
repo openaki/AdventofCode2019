@@ -1,11 +1,4 @@
-use aoc2019::day1;
-use aoc2019::day2;
-use aoc2019::day3;
-use aoc2019::day4;
-use aoc2019::day5;
-use aoc2019::day6;
-use aoc2019::day7;
-use aoc2019::day8;
+use aoc2019::*;
 
 use structopt::StructOpt;
 
@@ -26,6 +19,7 @@ fn main() {
         Box::new(day6::solve),
         Box::new(day7::solve),
         Box::new(day8::solve),
+        Box::new(day9::solve),
     ];
 
     println!("{:?}", opt);
