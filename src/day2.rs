@@ -1,19 +1,19 @@
 use std::fs;
 use crate::instruction_set::{run_program, Program};
 
-fn solve_impl<T: Fn(&mut Vec<i32>)>(f: T) {
+fn solve_impl<T: Fn(&mut Vec<i64>)>(f: T) {
     let content = fs::read_to_string("./input/input2.txt").unwrap();
     let content = content.trim();
-    let mut content: Vec<i32> = content
+    let mut content: Vec<i64> = content
         .split(',')
-        .map(|w| w.parse::<i32>().unwrap())
+        .map(|w| w.parse::<i64>().unwrap())
         .collect();
 
     f(&mut content);
 }
 
 fn solve_a() {
-    solve_impl(|vec: &mut Vec<i32>| {
+    solve_impl(|vec: &mut Vec<i64>| {
         vec[1] = 12;
         vec[2] = 2;
         run_program(&mut Program::new(vec.clone()));
@@ -21,7 +21,7 @@ fn solve_a() {
     })
 }
 
-fn solve_b_impl(addr: &mut Vec<i32>) {
+fn solve_b_impl(addr: &mut Vec<i64>) {
     for i in 0..100 {
         for j in 0..100 {
             let mut new_addr = addr.clone();
@@ -39,7 +39,7 @@ fn solve_b_impl(addr: &mut Vec<i32>) {
 }
 
 fn solve_b() {
-    solve_impl(|vec: &mut Vec<i32>| solve_b_impl(vec))
+    solve_impl(|vec: &mut Vec<i64>| solve_b_impl(vec))
 }
 
 pub fn solve() {

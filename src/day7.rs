@@ -1,6 +1,6 @@
 use crate::instruction_set::{run_program, Program};
 
-pub fn run_through_amplification(program: Vec<i32>, phase_setting: Vec<i32>, num_amplifiers: usize) -> i32 {
+pub fn run_through_amplification(program: Vec<i64>, phase_setting: Vec<i64>, num_amplifiers: usize) -> i64 {
     let mut current_output = 0;
 
     let mut first_time = true;
@@ -31,7 +31,7 @@ pub fn run_through_amplification(program: Vec<i32>, phase_setting: Vec<i32>, num
     }
 }
 
-pub fn get_max_output(program: Vec<i32>, phase_min: i32, phase_max: i32) -> i32 {
+pub fn get_max_output(program: Vec<i64>, phase_min: i64, phase_max: i64) -> i64 {
     let mut max_output = 0;
 
     for p1 in phase_min..phase_max {
@@ -60,12 +60,12 @@ pub fn get_max_output(program: Vec<i32>, phase_min: i32, phase_max: i32) -> i32 
 }
 
 
-fn solve_impl(phase_min: i32, phase_max:i32) -> i32 {
+fn solve_impl(phase_min: i64, phase_max:i64) -> i64 {
     let content = std::fs::read_to_string("./input/input7.txt").unwrap();
     let content = content.trim();
-    let content: Vec<i32> = content
+    let content: Vec<i64> = content
         .split(',')
-        .map(|w| w.parse::<i32>().unwrap())
+        .map(|w| w.parse::<i64>().unwrap())
         .collect();
 
     get_max_output(content, phase_min, phase_max)

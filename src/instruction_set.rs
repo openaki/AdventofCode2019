@@ -8,19 +8,20 @@ pub enum OpcodeResult {
 }
 
 pub struct Program {
-    pub program : Vec<i32>,
+    pub program : Vec<i64>,
     pub program_counter : usize,
-    pub inputs: VecDeque<i32>,
-    pub outputs: VecDeque<i32>,
+    pub inputs: VecDeque<i64>,
+    pub outputs: VecDeque<i64>,
+    pub relative_base: i32,
 }
 
 impl Program {
-    pub fn new(program: Vec<i32>) -> Program {
+    pub fn new(program: Vec<i64>) -> Program {
         Program::new_with_io(program, 0, VecDeque::new(), VecDeque::new())
     }
 
-    pub fn new_with_io(program: Vec<i32>, program_counter: usize, inputs: VecDeque<i32>, outputs: VecDeque<i32>) -> Program {
-        Program { program, program_counter, inputs, outputs }
+    pub fn new_with_io(program: Vec<i64>, program_counter: usize, inputs: VecDeque<i64>, outputs: VecDeque<i64>) -> Program {
+        Program { program, program_counter, inputs, outputs, relative_base: 0}
     }
 }
 
@@ -32,43 +33,83 @@ fn handle_opcode(program_state: &mut Program) -> OpcodeResult {
     let opcode = program[pc];
     let inst = opcode % 100;
     let params = opcode / 100;
-    let am = (params % 10) as usize;
-    let bm = (params / 10) as usize;
+    let am = (params % 10) as i64;
+    let bm = ((params / 10) % 10) as i64;
+    let cm = (params / 100) as i64;
+    let relative_base = program_state.relative_base;
 
-    let rval = |param, index: usize| -> i32 {
-        if param == 1 {
-            program[pc + index]
-        } else {
-            program[program[pc + index] as usize]
+    // eprintln!("inst = {:#?}", inst);
+    // eprintln!("program = {:?}", program);
+    // eprintln!("relative_base = {:#?}", relative_base);
+    // eprintln!("outputs = {:?}", outputs);
+
+    let mut get_fn = |program: &mut Vec<i64>, index: usize| -> i64 {
+        if index >= program.len() {
+            program.resize(index + 1, 0);
         }
+        program[index]
+    };
+
+    let mut rval = |param, index: i32| -> i64 {
+        let pi: usize =
+        if param == 1 {
+            (pc as i32 + index) as usize
+        } else if  param == 2 {
+            (relative_base as i64 + program[pc + index as usize]) as usize
+        }
+        else {
+            program[(pc as i32 + index) as usize] as usize
+        };
+
+        get_fn(program, pi)
+    };
+    let mut sval = |program: &mut Vec<i64>, param, index| -> usize {
+        if param == 1 {
+            (pc as i32 + index) as usize
+        } else if param == 2 {
+            (relative_base as i64 + program[pc + index as usize]) as usize
+        } else {
+            program[(pc as i32 + index) as usize] as usize
+        }
+    };
+
+    let mut set_fn = |program : &mut Vec<i64>, index: usize, val: i64| {
+        if index >= program.len() {
+            program.resize(index as usize+ 1, 0);
+        }
+        program[index] = val;
     };
 
     match inst {
         1 => {
             let op1 = rval(am, 1);
             let op2 = rval(bm, 2);
-            let result_op = program[pc + 3] as usize;
-            program[result_op] = op1 + op2;
+            let result_op = sval(program, cm , 3) as usize;
+            set_fn(program, result_op, op1 + op2);
             OpcodeResult::Handled(pc + 4)
         }
         2 => {
             let op1 = rval(am, 1);
             let op2 = rval(bm, 2);
-            let result_op = program[pc + 3] as usize;
-            program[result_op] = op1 * op2;
+            let result_op = sval(program, cm, 3) as usize;
+            set_fn(program, result_op, op1 * op2);
             OpcodeResult::Handled(pc + 4)
         }
         3 => {
-            //let mut read_string = String::new();
-            //reader.read_line(&mut read_string).unwrap();
-            //let ri = read_string.trim().parse::<i32>().unwrap();
             if inputs.is_empty() {
                 OpcodeResult::AwaitingInput
             } else {
                 let ri = inputs.pop_front().unwrap();
+                let location = program[pc + 1];
+                let result_op =
 
-                let result_op = program[pc + 1] as usize;
-                program[result_op] = ri;
+                if am == 2 {
+                    (relative_base as i64 + location) as usize
+                } else {
+                    location as usize
+                };
+
+                set_fn(program, result_op, ri);
                 OpcodeResult::Handled(pc + 2)
             }
         }
@@ -99,16 +140,34 @@ fn handle_opcode(program_state: &mut Program) -> OpcodeResult {
         7 => {
             let op1 = rval(am, 1);
             let op2 = rval(bm, 2);
-            let result_op = program[pc + 3] as usize;
-            program[result_op] = if op1 < op2 { 1 } else { 0 };
+            let result_op = sval(program, cm, 3) as usize;
+            let ans = if op1 < op2 { 1 } else { 0 };
+            set_fn(program, result_op, ans);
             OpcodeResult::Handled(pc + 4)
         }
         8 => {
+            // eprintln!("opcode = {:#?}", opcode);
+            // eprintln!("inst = {:#?}", inst);
+            //eprintln!("program = {:?}", program);
+            // eprintln!("relative_base = {:#?}", relative_base);
+            // eprintln!("outputs = {:?}", outputs);
+            // eprintln!("am = {:#?}", am);
+            // eprintln!("bm = {:#?}", bm);
+            // eprintln!("program[pc+3] = {:#?}", program[pc + 3]);
+
             let op1 = rval(am, 1);
             let op2 = rval(bm, 2);
-            let result_op = program[pc + 3] as usize;
-            program[result_op] = if op1 == op2 { 1 } else { 0 };
+            let result_op = sval(program, cm, 3) as usize;
+            let ans = if op1 == op2 { 1 } else { 0 };
+            set_fn(program, result_op, ans);
+
             OpcodeResult::Handled(pc + 4)
+        }
+        9 => {
+            let op1 = rval(am, 1);
+            //let op1 = program[pc + 1];
+            program_state.relative_base += op1 as i32;
+            OpcodeResult::Handled(pc + 2)
         }
         99 => OpcodeResult::Exit,
         _ => OpcodeResult::Error,
@@ -136,7 +195,7 @@ pub fn run_program(program_state: &mut Program) -> OpcodeResult {
 
 pub fn run_program_first_location(program_state: &mut Program) -> i32 {
     run_program(program_state);
-    program_state.program[0]
+    program_state.program[0] as i32
 
 }
 
@@ -163,7 +222,7 @@ mod tests {
         assert_eq!(99, p.program[4]);
     }
 
-    fn test_io(program: Vec<i32>, input_elem: i32, exp_output: Vec<i32>) {
+    fn test_io(program: Vec<i64>, input_elem: i64, exp_output: Vec<i64>) {
         let output = VecDeque::new();
         let mut input = VecDeque::new();
         input.push_back(input_elem);
@@ -237,5 +296,84 @@ mod tests {
     }
 
 
+    #[test]
+    fn test_day9_1() {
+        let v = vec!(109, 1, 204, -1, 1001, 100, 1, 100, 1008, 100, 16, 101, 1006, 101, 0, 99);
+        let mut output = VecDeque::new();
+        let mut input = VecDeque::new();
+
+        let mut p = Program::new_with_io(v.clone(), 0, input, output);
+        run_program(&mut p);
+
+        eprintln!("p.outputs = {:#?}", p.outputs);
+
+        assert_eq!(v.len(), p.outputs.len());
+        for i in 0..v.len() {
+            assert_eq!(v[i], p.outputs[i]);
+
+        }
+
+        // assert_eq!(exp_output.len(), p.outputs.len());
+        // for i in 0..exp_output.len() {
+        //     assert_eq!(exp_output[i], p.outputs[i]);
+        // }
+    }
+
+    #[test]
+    fn test_day9_2() {
+        let v = vec!(1102, 34915192, 34915192, 7, 4, 7, 99, 0);
+
+        let mut output = VecDeque::new();
+        let mut input = VecDeque::new();
+
+        let mut p = Program::new_with_io(v, 0, input, output);
+        run_program(&mut p);
+
+        eprintln!("output = {:#?}", p.outputs);
+        eprintln!("p.relative_base = {:#?}", p.relative_base);
+
+        // assert_eq!(exp_output.len(), p.outputs.len());
+        // for i in 0..exp_output.len() {
+        //     assert_eq!(exp_output[i], p.outputs[i]);
+        // }
+    }
+
+
+    #[test]
+    fn test_day9_3() {
+        let v = vec!(104, 1125899906842624, 99);
+
+        let mut output = VecDeque::new();
+        let mut input = VecDeque::new();
+
+        let mut p = Program::new_with_io(v, 0, input, output);
+        run_program(&mut p);
+
+        assert_eq!(1125899906842624, p.outputs[0]);
+    }
+    
+    #[test]
+    fn test_temp1() {
+        let v = vec!(109, -1, 4, 1, 99);
+        let mut output = VecDeque::new();
+        let mut input = VecDeque::new();
+        let mut p = Program::new_with_io(v, 0, input, output);
+        run_program(&mut p);
+
+        eprintln!("p.outputs = {:#?}", p.outputs);
+    }
+
+
+    #[test]
+    fn test_temp2() {
+        let v = vec!(109, 1, 203, 2, 204, 2, 99);
+        let mut output = VecDeque::new();
+        let mut input = VecDeque::new();
+        input.push_back(9876);
+        let mut p = Program::new_with_io(v, 0, input, output);
+        run_program(&mut p);
+
+        eprintln!("p.outputs = {:#?}", p.outputs);
+    }
 }
 

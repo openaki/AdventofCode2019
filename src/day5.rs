@@ -1,12 +1,12 @@
 use std::fs;
 use crate::instruction_set::{run_program, Program};
 
-fn solve_impl() -> i32 {
+fn solve_impl() -> i64 {
     let content = fs::read_to_string("./input/input5.txt").unwrap();
     let content = content.trim();
-    let content: Vec<i32> = content
+    let content: Vec<i64> = content
         .split(',')
-        .map(|w| w.parse::<i32>().unwrap())
+        .map(|w| w.parse::<i64>().unwrap())
         .collect();
     let mut p = Program::new(content);
     run_program(&mut p);
