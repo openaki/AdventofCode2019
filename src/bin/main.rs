@@ -20,6 +20,7 @@ fn main() {
         Box::new(day7::solve),
         Box::new(day8::solve),
         Box::new(day9::solve),
+        Box::new(day10::solve),
     ];
 
     println!("{:?}", opt);
